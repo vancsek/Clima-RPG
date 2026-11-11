@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gerador de Clima e Precipitação</title>
+  <style>
+    :root {
+      --bg-color: #1a1a1d;
+      --card-bg: #252529;
+      --accent-color: #7289da;
+      --accent-hover: #5b6eae;
+      --text-color: #e1e1e6;
+      --border-color: #3f3f46;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+      color: #fff;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    select:focus {
+      border-color: var(--accent-color);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--accent-color);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .result-box {
+      margin-top: 24px;
+      padding: 16px;
+      background-color: var(--bg-color);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+    }
+
+    .result-item {
+      margin-bottom: 12px;
+    }
+
+    .result-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #a1a1aa;
+      letter-spacing: 0.05em;
+    }
+
+    .result-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    .dice-badge {
+      display: inline-block;
+      background: var(--border-color);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🌦️ Gerador de Clima</h1>
+
+  <div class="form-group">
+    <label for="bioma">Bioma</label>
+    <select id="bioma" onchange="atualizarEstacoes()">
+      <option value="temperado">Temperado & Florestas</option>
+      <option value="tropical">Tropical & Pluvial</option>
+      <option value="arido">Árido & Deserto</option>
+      <option value="boreal">Boreal & Tundra</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="estacao">Estação do Ano</label>
+    <select id="estacao">
+      <!-- Opções dinâmicas via JS -->
+    </select>
+  </div>
+
+  <button onclick="gerarClima()">🎲 Rolar Tempo</button>
+
+  <div class="result-box" id="resultado" style="display: none;">
+    <div class="result-item">
+      <div class="result-title">Condição do Céu / Clima <span class="dice-badge" id="dado-clima">d6: -</span></div>
+      <div class="result-value" id="res-clima">-</div>
+    </div>
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+    <div class="result-item">
+      <div class="result-title">Precipitação <span class="dice-badge" id="dado-precip">d6: -</span></div>
+      <div class="result-value" id="res-precip">-</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const estacoesPorBioma = {
+    temperado: [
+      { val: 'primavera', text: 'Primavera' },
+      { val: 'verao', text: 'Verão' },
+      { val: 'outono', text: 'Outono' },
+      { val: 'inverno', text: 'Inverno' }
+    ],
+    tropical: [
+      { val: 'chuvosa', text: 'Estação Chuvosa' },
+      { val: 'seca', text: 'Estação Seca' }
+    ],
+    arido: [
+      { val: 'seca', text: 'Estação Seca' },
+      { val: 'umida', text: 'Estação Úmida' }
+    ],
+    boreal: [
+      { val: 'verao', text: 'Verão Boreal' },
+      { val: 'inverno', text: 'Inverno Boreal' }
+    ]
+  };
+
+  const tabelaClima = {
+    temperado: {
+      primavera: {
+        clima: ["Ensolarado", "Ensolarado", "Parcialmente Nublado", "Parcialmente Nublado", "Ensolarado (Calor)", "Ensolarado (Calor)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Chuva Fraca (1 a 5 mm)", "Chuva Fraca (1 a 5 mm)", "Tempestade (25 a 40 mm)", "Tempestade (25 a 40 mm)"]
+      },
+      verao: {
+        clima: ["Ensolarado", "Ensolarado", "Parcialmente Nublado", "Parcialmente Nublado", "Ensolarado (Muito Quente)", "Ensolarado (Muito Quente)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Chuva (10 a 20 mm)", "Chuva (10 a 20 mm)", "Tempestade Severa (40 a 70+ mm)", "Tempestade Severa (40 a 70+ mm)"]
+      },
+      outono: {
+        clima: ["Parcialmente Nublado", "Parcialmente Nublado", "Nublado", "Nublado", "Nublado (Frio)", "Nublado (Frio)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Garoa / Chuva Fraca (1 a 3 mm)", "Garoa / Chuva Fraca (1 a 3 mm)", "Chuva (15 a 30 mm)", "Chuva (15 a 30 mm)"]
+      },
+      inverno: {
+        clima: ["Ensolarado (Frio)", "Ensolarado (Frio)", "Parcialmente Nublado (Frio)", "Parcialmente Nublado (Frio)", "Ensolarado (Geada)", "Ensolarado (Geada)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Chuva Fraca / Geada (1 a 5 mm)", "Chuva Fraca / Geada (1 a 5 mm)"]
+      }
+    },
+    tropical: {
+      chuvosa: {
+        clima: ["Nublado", "Nublado", "Parcialmente Nublado", "Parcialmente Nublado", "Nublado (Abafado)", "Nublado (Abafado)"],
+        precip: ["Chuva (15 a 30 mm)", "Chuva (15 a 30 mm)", "Chuva Forte (30 a 60 mm)", "Chuva Forte (30 a 60 mm)", "Tempestade Torrencial (70 a 120+ mm)", "Tempestade Torrencial (70 a 120+ mm)"]
+      },
+      seca: {
+        clima: ["Ensolarado", "Ensolarado", "Ensolarado", "Ensolarado", "Ensolarado (Seco)", "Ensolarado (Seco)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Chuva Fraca / Pancada (2 a 5 mm)", "Chuva Fraca / Pancada (2 a 5 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)"]
+      }
+    },
+    arido: {
+      seca: {
+        clima: ["Ensolarado", "Ensolarado", "Ensolarado (Poeira)", "Ensolarado (Poeira)", "Ensolarado (Extremo)", "Ensolarado (Extremo)"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Sem Chuva (0 mm)"]
+      },
+      umida: {
+        clima: ["Parcialmente Nublado", "Parcialmente Nublado", "Nublado", "Nublado", "Nublado (Abafado)", "Nublado (Abafado)"],
+        precip: ["Chuva Fraca (1 a 3 mm)", "Chuva Fraca (1 a 3 mm)", "Chuva (10 a 25 mm)", "Chuva (10 a 25 mm)", "Tempestade / Enxurrada (30 a 50+ mm)", "Tempestade / Enxurrada (30 a 50+ mm)"]
+      }
+    },
+    boreal: {
+      verao: {
+        clima: ["Parcialmente Nublado", "Parcialmente Nublado", "Nublado", "Nublado", "Nevoeiro", "Nevoeiro"],
+        precip: ["Sem Chuva (0 mm)", "Sem Chuva (0 mm)", "Chuva Fraca / Neve Fraca (1 a 5 mm)", "Chuva Fraca / Neve Fraca (1 a 5 mm)", "Chuva Fria (10 a 20 mm)", "Chuva Fria (10 a 20 mm)"]
+      },
+      inverno: {
+        clima: ["Nublado (Frio)", "Nublado (Frio)", "Encouberto / Escuro", "Encouberto / Escuro", "Encouberto (Frio Extremo)", "Encouberto (Frio Extremo)"],
+        precip: ["Neve Fraca (1 a 3 cm / ~2 mmeq)", "Neve Fraca (1 a 3 cm / ~2 mmeq)", "Neve (5 a 15 cm / ~10 mmeq)", "Neve (5 a 15 cm / ~10 mmeq)", "Nevasca (20 a 50+ cm / ~30+ mmeq)", "Nevasca (20 a 50+ cm / ~30+ mmeq)"]
+      }
+    }
+  };
+
+  function atualizarEstacoes() {
+    const biomaSelect = document.getElementById('bioma').value;
+    const estacaoSelect = document.getElementById('estacao');
+    estacaoSelect.innerHTML = '';
+
+    estacoesPorBioma[biomaSelect].forEach(opt => {
+      const el = document.createElement('option');
+      el.value = opt.val;
+      el.textContent = opt.text;
+      estacaoSelect.appendChild(el);
+    });
+  }
+
+  function rolarD6() {
+    return Math.floor(Math.random() * 6);
+  }
+
+  function gerarClima() {
+    const bioma = document.getElementById('bioma').value;
+    const estacao = document.getElementById('estacao').value;
+
+    const rollClima = rolarD6();
+    const rollPrecip = rolarD6();
+
+    const resultadoClima = tabelaClima[bioma][estacao].clima[rollClima];
+    const resultadoPrecip = tabelaClima[bioma][estacao].precip[rollPrecip];
+
+    document.getElementById('dado-clima').textContent = `d6: ${rollClima + 1}`;
+    document.getElementById('dado-precip').textContent = `d6: ${rollPrecip + 1}`;
+    document.getElementById('res-clima').textContent = resultadoClima;
+    document.getElementById('res-precip').textContent = resultadoPrecip;
+
+    document.getElementById('resultado').style.display = 'block';
+  }
+
+  atualizarEstacoes();
+</script>
+
+</body>
+</html>
